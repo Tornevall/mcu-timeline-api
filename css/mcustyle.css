@@ -1,0 +1,24 @@
+table {
+    width: 100%;
+}
+
+thead {
+    background: black;
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+}
+td {
+    padding: 10px !important;
+}
+
+.tableCategory {
+    font-size: 26px !important;
+    font-weight: bold;
+}
+
+.mcutable {
+    margin-bottom: 10px !important;
+    border-bottom: 1px solid black !important;
+    margin-bottom: 10px;
+}

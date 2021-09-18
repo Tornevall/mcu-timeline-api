@@ -1,0 +1,65 @@
+<html>
+<head>
+    <title>Snapshot-616 - Marvel Cinematic Multiverse API Viewer</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+          integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+            integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+            integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+            crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+            integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+            crossorigin="anonymous"></script>
+
+    <link rel="stylesheet" href="content.css">
+    <script src="content.js"></script>
+    <script>
+        var mcuApiUrl = 'https://api.earth616.org/api/mcu';
+        var mcuData;
+        var mcuCategoryList;
+
+        $(document).ready(function () {
+            getApiContent()
+        });
+    </script>
+</head>
+<body>
+
+<div class="container container-fluid jumbotron" style="padding-top: 20px !important;">
+    <div class="alert alert-primary main" style="padding-top: 10px; margin-bottom: 10px;"><b>Snapshot-616 - Marvel
+        Cinematic Multiverse API</b>
+    </div>
+    <div class="alert alert-info clickable mainCategory" onclick="getTable('all')"><b>Show all categories</b></div>
+
+    <div class="input-group mb-3">
+        <div class="input-group-prepend">
+            <div class="input-group-text">
+                <input type="checkbox" checked="checked" aria-label="Include TV Shows" id="includeTv" onchange="checkMcuChoice()">&nbsp;
+                <label class="form-check-label" for="includeTv">Include TV Shows.</label>
+            </div>
+            <div class="input-group-text">
+                <input type="checkbox" checked="checked" aria-label="Include TV Shows" id="includeFilm" onchange="checkMcuChoice()">&nbsp;
+                <label class="form-check-label" for="includeFilm">Include Films.</label>
+            </div>
+            <div class="input-group-text">
+                <label class="form-check-label" for="find">Find </label>&nbsp;
+                <input type="text" id="find" readonly="readonly" onkeyup="findit()">
+            </div>
+        </div>
+    </div>
+
+    <hr>
+    <div id="loader"></div>
+    <div id="tooFast"></div>
+    <div id="mcuTable">
+    </div>
+    <div id="bottomLine" style="text-align: center;margin: top:10px;">
+        <a href="https://mcu.earth616.org/display/TORNEVALL/Marvel+MCU+Timeline+API">Powered by Earth616-API.</a><br>
+        <a href="https://mcu.earth616.org/">Check out the old manually handled site here!</a><br>
+        <a href="/legacy">Legacy Snapshot has moved here.</a><br>
+    </div>
+    <br>
+</div>
+</body>
+</html>
