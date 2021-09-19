@@ -286,6 +286,7 @@ function getNewContentElement(contentData) {
         'notes': {},
         'imdbcache': {},
         'imdbepisodecache': {},
+        'keywords': '',
         'distribution': '',
         'description': 'imdb',
         'image': 'imdb',
