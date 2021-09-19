@@ -1,5 +1,8 @@
 # Marvel MCU Timeline API
 
+If you want to take a look of a project that works with AJAX processing against the API you can take a look at
+https://snapshot.earth616.org/ that is live and running on this codebase.
+
 This is a project that has a long history with a lot of manual handling - the first version was handled in a confluence
 documentation (https://mcu.earth616.org/pages/viewpage.action?pageId=54132764) and is still partially maintained.
 
