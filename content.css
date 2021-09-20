@@ -5,6 +5,7 @@
 #loader {
     text-align: center;
 }
+
 #mcuTable {
     text-align: left;
 }
@@ -25,11 +26,20 @@
     position: absolute;
 }
 
+.secondLoader {
+    right: 0;
+    position: absolute;
+}
+
 .stringifiedText {
     font-size: 14px;
     font-weight: bold;
     font-style: italic;
     color: #004ea8;
+}
+
+.findReadOnly {
+    background: #ccc;
 }
 
 .stringifiedTitle {
