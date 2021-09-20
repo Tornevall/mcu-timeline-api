@@ -446,7 +446,7 @@ function getNewContentElement(contentData) {
 
     var imdbLink = '';
 
-    if (apiContent["imdb"] !== '') {
+    if (apiContent["imdb"] !== '' && apiContent["imdb"].indexOf('http') > -1) {
         imdbLink = $('<a>', {href: apiContent["imdb"], class: 'badge badge-primary', target: '_blank'}).html('IMDB');
     }
 
