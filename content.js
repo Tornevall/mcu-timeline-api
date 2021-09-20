@@ -5,24 +5,68 @@ var includeTv;
 var finder = '';
 var lastSearch = '';
 var finderTimeout;
+var mcuApiUrl = 'https://api.earth616.org/api/mcu';
+/**
+ * Film and TV-series list container.
+ * @type {{}}
+ */
+var mcuData = {};
+var mcuCategoryList = [];
+/**
+ * List of categories retrieved from the API, and which CID (index) they have.
+ * This has been added after the first release of this sample and has been used to
+ * utilize the speed of loading (by loading categories first).
+ * @type {{}}
+ */
+var mcuCategoryIndexes = {};
+var dataDownloaded = [];
 
 /**
  * Initialize API update.
  */
 function getApiContent() {
     $('#loader').html($('<img>', {src: "./Jumbotron-Wedges-3s-64px.gif", border: "none"}));
+
     $.ajax(
         {
-            url: mcuApiUrl,
+            url: mcuApiUrl + '/categories',
             method: "GET",
             dataType: 'json'
         }
     ).done(
         function (data) {
-            $('#find').prop('readonly', false);
-            mcuData = data.mcuTimeLine;
+            var categoryIndexes = [];
+            for (var categoryIndex in data) {
+                mcuData[data[categoryIndex]['category']] = [];
+                categoryIndexes.push(data[categoryIndex]['cid']);
+                mcuCategoryIndexes[data[categoryIndex]['category']] = data[categoryIndex]['cid'];
+            }
             mcuCategoryList = getCategories();
             getTable('all');
+
+            for (var categoryName in mcuCategoryIndexes) {
+                cIdx = mcuCategoryIndexes[categoryName];
+                if (cIdx > 0) {
+                    $.ajax(
+                        {
+                            url: mcuApiUrl + '/timeline/category/' + cIdx,
+                            method: "GET",
+                            dataType: 'json'
+                        }
+                    ).done(
+                        function data(mcuDataResponse) {
+                            var mcuDataObject = mcuDataResponse['mcuTimeLine'][Object.keys(mcuDataResponse['mcuTimeLine'])[0]];
+                            $('#mcuTableLoading_' + mcuCategoryIndexes[Object.keys(mcuDataResponse['mcuTimeLine'])[0]]).remove();
+                            dataDownloaded.push($(mcuDataObject).first()[0]['cid']);
+                            mcuData[Object.keys(mcuDataResponse['mcuTimeLine'])[0]] = mcuDataObject;
+                            if ($('span[id^=mcuTableLoading]').length === 0) {
+                                $('#find').prop('readonly', false);
+                                $('#find').removeClass('findReadOnly');
+                            }
+                        }
+                    );
+                }
+            }
         }
     );
 }
@@ -239,15 +283,35 @@ function getRenderedTable(request) {
 
     switch (request) {
         case 'all':
+            var mcuCid = 0;
+            var loadingHtml = '';
             for (var i = 0; i < mcuCategoryList.length; i++) {
+                mcuCid = mcuCategoryIndexes[mcuCategoryList[i]];
+
+                if (!dataDownloaded.includes(mcuCid)) {
+                    loadingHtml = $(
+                        '<span>', {id: 'mcuTableLoading_' + mcuCid, class: 'secondLoader'})
+                        .html(
+                            $('<img>', {
+                                src: 'Gear-0.2s-32px.gif',
+                                'border': 0
+                            })
+                        );
+                } else {
+                    loadingHtml = '';
+                }
+
                 renderHtml = $('<div>', {
-                    id: 'mcuTable',
+                    id: 'mcuTable_' + mcuCid,
                     class: 'clickable alert alert-success',
                     click: function () {
                         getClickedRequest(this)
                     }
                 }).html(
-                    mcuCategoryList[i]
+                    $('<div>').html(mcuCategoryList[i])
+                        .append(
+                            loadingHtml
+                        )
                 );
                 jqueryTable.append(renderHtml);
             }

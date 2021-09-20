@@ -15,10 +15,6 @@
     <link rel="stylesheet" href="content.css">
     <script src="content.js"></script>
     <script>
-        var mcuApiUrl = 'https://api.earth616.org/api/mcu';
-        var mcuData;
-        var mcuCategoryList;
-
         $(document).ready(function () {
             getApiContent()
         });
@@ -44,7 +40,7 @@
             </div>
             <div class="input-group-text">
                 <label class="form-check-label" for="find">Find </label>&nbsp;
-                <input type="text" id="find" readonly="readonly" onkeyup="findit()">
+                <input type="text" id="find" readonly="readonly" class="findReadOnly" onkeyup="findit()">
             </div>
         </div>
     </div>
@@ -54,7 +50,7 @@
     <div id="tooFast"></div>
     <div id="mcuTable">
     </div>
-    <div id="bottomLine" style="text-align: center;margin: top:10px;">
+    <div id="bottomLine" style="text-align: center;margin-top:10px;">
         <a href="https://mcu.earth616.org/display/TORNEVALL/Marvel+MCU+Timeline+API">Powered by Earth616-API.</a><br>
         <a href="https://mcu.earth616.org/">Check out the old manually handled site here!</a><br>
         <a href="/legacy">Legacy Snapshot has moved here.</a><br>
