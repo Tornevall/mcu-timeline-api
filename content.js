@@ -6,6 +6,9 @@ var finder = '';
 var lastSearch = '';
 var finderTimeout;
 
+/**
+ * Initialize API update.
+ */
 function getApiContent() {
     $('#loader').html($('<img>', {src: "./Jumbotron-Wedges-3s-64px.gif", border: "none"}));
     $.ajax(
@@ -24,6 +27,9 @@ function getApiContent() {
     );
 }
 
+/**
+ * Handler for the search function.
+ */
 function findit() {
     finder = $('#find').val();
     if (finder !== '') {
@@ -33,7 +39,7 @@ function findit() {
             function () {
                 getTable('all_search')
             },
-            1000
+            800
         );
     } else if (finder === '' && lastSearch !== '') {
         if (currentCategoryChoice === 'all_search') {
@@ -48,9 +54,7 @@ function findit() {
  * List only tv/film matches.
  */
 function checkMcuChoice() {
-    includeFilm = $('#includeFilm').is(":checked");
-    includeTv = $('#includeTv').is(":checked");
-
+    checkMcuOptions();
     if (!includeFilm && !includeTv) {
         $('#includeFilm').click();
     }
@@ -58,12 +62,19 @@ function checkMcuChoice() {
 }
 
 /**
+ * Update variables for including TV/Film
+ */
+function checkMcuOptions() {
+    includeFilm = $('#includeFilm').is(":checked");
+    includeTv = $('#includeTv').is(":checked");
+}
+
+/**
  * Autoloader for tables.
  * @param request
  */
 function getTable(request) {
-    includeFilm = $('#includeFilm').is(":checked");
-    includeTv = $('#includeTv').is(":checked");
+    checkMcuOptions();
     currentCategoryChoice = request;
 
     $('#mcuTable').hide().html(generateTable(request)).fadeIn('slow')
@@ -97,6 +108,11 @@ function getCategories() {
     return list;
 }
 
+/**
+ * Get film/tv-list based on the category name.
+ * @param categoryKey
+ * @returns {*[]}
+ */
 function getListByKey(categoryKey) {
     var list = [];
     for (var category in mcuData) {
@@ -105,7 +121,9 @@ function getListByKey(categoryKey) {
                 list = mcuData[category];
                 break;
             } else {
-                Object.assign(list, mcuData[category]);
+                for (var keyIndex in mcuData[category]) {
+                    list.push(mcuData[category][keyIndex]);
+                }
             }
         }
     }
@@ -121,10 +139,21 @@ function getContentDetails(id) {
     $('#info_' + id).toggle('medium');
 }
 
+/**
+ * MCU Table is clicked.
+ * @param o
+ */
 function getClickedRequest(o) {
     getTable(o.innerText);
 }
 
+/**
+ * Search for content in arrays.
+ *
+ * @param value
+ * @param arrayObject
+ * @returns {boolean}
+ */
 function valueIn(value, arrayObject) {
     var result = false;
     for (var i = 0; i < arrayObject.length; i++) {
@@ -145,13 +174,24 @@ function valueIn(value, arrayObject) {
     return result;
 }
 
+/**
+ * Decide whether there is a search result or not, when finder is no empty.
+ * @param contentData
+ * @returns {boolean}
+ */
 function getContentByFinder(contentData) {
+    checkMcuOptions();
+
+    // If there is no search string, allow always.
+    if (finder.trim() === '') {
+        return true;
+    }
+
     var returnBySearch = false;
     var actorCache = {};
     var actorCacheEpisode = {};
 
     if (finder !== '' && typeof contentData !== 'undefined') {
-
         try {
             actorCache = typeof contentData["imdbcache"]["actor"] === 'object' ? contentData["imdbcache"]["actor"] : {};
         } catch (e) {
@@ -177,13 +217,15 @@ function getContentByFinder(contentData) {
             }
         }
     }
-    if (finder === '') {
-        returnBySearch = true;
-    }
 
     return returnBySearch;
 }
 
+/**
+ * Render content table.
+ * @param request
+ * @returns {*|jQuery|HTMLElement}
+ */
 function getRenderedTable(request) {
     var jqueryTable = $('<div id="mcuContainer">');
     var renderHtml;
@@ -217,13 +259,13 @@ function getRenderedTable(request) {
             for (var listId = 0; listId < contentList.length; listId++) {
                 contentData = contentList[listId];
 
+                if (!getContentByFinder(contentData)) {
+                    continue;
+                }
                 if (contentData["tv"] === "1" && !includeTv) {
                     continue;
                 }
                 if (contentData["tv"] === "0" && !includeFilm) {
-                    continue;
-                }
-                if (!getContentByFinder(contentData)) {
                     continue;
                 }
 
