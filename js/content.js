@@ -441,19 +441,17 @@ function getNewContentElement(contentData) {
     var contentNotes = getStringifiedArray(apiContent["notes"], apiContent["mcuid"], 'Content Notes');
 
     var distribution = getBadge('distribution', apiContent, apiContent["distribution"], 'badge-dark');
-    if (finder === '*') {
-        if (parseInt(apiContent["phase"]) > 0) {
-            var phase = getBadge('phase', apiContent, 'Phase ' + apiContent["phase"], 'badge-primary');
-        } else {
-            var phase = $('<span>', {}).html('');
-        }
+    if (parseInt(apiContent["phase"]) > 0) {
+        var phase = getBadge('phase', apiContent, 'Phase ' + apiContent["phase"], 'badge-info');
+    } else {
+        var phase = $('<span>', {}).html('');
     }
 
     var cardBadges = $('<span>',
         {
             id: 'cb_' + apiContent["mcuid"],
             class: 'cardBadges'
-        }).html(phase).append(distribution);
+        }).html(finder === '*' ? phase : '').append(distribution);
 
     var returnThis = $('<div>').html(
         $('<div>', {
@@ -494,7 +492,7 @@ function getNewContentElement(contentData) {
         )
         .append($('<div>').html(postCreditData))
         .append($('<div>').html(contentNotes))
-        .append($('<div>').html(imdbLink));
+        .append($('<div>').html(imdbLink).prepend(phase));
 
     return returnThis.append(hiddenContent);
 }
