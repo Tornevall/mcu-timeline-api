@@ -25,7 +25,7 @@ var dataDownloaded = [];
  * Initialize API update.
  */
 function getApiContent() {
-    $('#loader').html($('<img>', {src: "./Jumbotron-Wedges-3s-64px.gif", border: "none"}));
+    $('#loader').html($('<img>', {src: 'images/loadingio_wedges_64.gif', border: "none"}));
 
     $.ajax(
         {
@@ -293,7 +293,7 @@ function getRenderedTable(request) {
                         '<span>', {id: 'mcuTableLoading_' + mcuCid, class: 'secondLoader'})
                         .html(
                             $('<img>', {
-                                src: 'Gear-0.2s-32px.gif',
+                                src: 'images/loadingio_gear32.gif',
                                 'border': 0
                             })
                         );

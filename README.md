@@ -1,5 +1,7 @@
 # Marvel MCU Timeline API
 
+## History
+
 If you want to take a look of a project that works with AJAX processing against the API you can take a look at
 https://snapshot.earth616.org/ that is live and running on this codebase.
 
@@ -21,3 +23,17 @@ react even after trying that way, this solution was created instead; with jquery
 open, everyone can take inspiration from this project and create their own search engine or whatever comes to mind.
 
 For this specific project, if any ideas comes to your mind, the suggestion is to join and/or contact me so that can be added either into the API or this project.
+
+## How it works
+
+I am supposed to write something here.
+
+## Screenshot
+
+### Onepage Html View - Overview Part 
+
+![Overview index](images/overview.png)
+
+### Onepage Html View - Expanded Category for Phase 3
+
+![](images/expanded_phase.png)
