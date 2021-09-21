@@ -402,6 +402,8 @@ function getNewContentElement(contentData) {
         'actor': 'imdb',
         'season': '',
         'episode': '',
+        'phase': '',
+        'category': '',
     };
 
     for (var contentKey in apiContent) {
@@ -438,13 +440,28 @@ function getNewContentElement(contentData) {
     var postCreditData = getStringifiedArray(apiContent["postcredits"], apiContent["mcuid"], 'Post Credit Scene Notes');
     var contentNotes = getStringifiedArray(apiContent["notes"], apiContent["mcuid"], 'Content Notes');
 
+    var distribution = getBadge('distribution', apiContent, apiContent["distribution"], 'badge-dark');
+    if (finder === '*') {
+        if (parseInt(apiContent["phase"]) > 0) {
+            var phase = getBadge('phase', apiContent, 'Phase ' + apiContent["phase"], 'badge-primary');
+        } else {
+            var phase = $('<span>', {}).html('');
+        }
+    }
+
+    var cardBadges = $('<span>',
+        {
+            id: 'cb_' + apiContent["mcuid"],
+            class: 'cardBadges'
+        }).html(phase).append(distribution);
+
     var returnThis = $('<div>').html(
         $('<div>', {
             class: 'mcu_title', click: function () {
                 getContentDetails(apiContent["mcuid"])
             }
         }).html(apiContent.title + ' (' + apiContent["premiere"] + ')')
-            .append($('<div>', {class: 'badge badge-dark distribution'}).html(apiContent["distribution"]))
+            .append(cardBadges)
     );
 
     var imdbLink = '';
@@ -480,6 +497,21 @@ function getNewContentElement(contentData) {
         .append($('<div>').html(imdbLink));
 
     return returnThis.append(hiddenContent);
+}
+
+/**
+ * Return a proper badge for specific data in the mcuDataContainer.
+ * @param key
+ * @param data
+ * @param text
+ * @param badgeClass
+ * @returns {*|jQuery}
+ */
+function getBadge(key, data, text, badgeClass) {
+    return $('<span>', {
+        id: key + '_' + data['mcuid'],
+        class: 'badge ' + badgeClass + ' ' + key,
+    }).html(text)
 }
 
 /**

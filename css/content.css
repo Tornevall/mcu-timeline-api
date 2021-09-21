@@ -21,8 +21,14 @@
 }
 
 .distribution {
-    font-size: 14px;
-    right: 0;
+    font-size: 12px;
+}
+.phase {
+    font-size: 12px;
+    margin-right: 5px;
+}
+.cardBadges {
+    right: 10px;
     position: absolute;
 }
 
