@@ -291,14 +291,15 @@ function getRenderedTable(request) {
                 if (!dataDownloaded.includes(mcuCid)) {
                     loadingHtml = $(
                         '<span>',
-                        {id: 'mcuTableLoading_' + mcuCid, class: 'secondLoader'}
-                    )
-                        .html(
-                            $('<img>', {
-                                src: 'images/loadingio_gear_32.gif',
-                                'border': 0
-                            })
-                        );
+                        {
+                            id: 'mcuTableLoading_' + mcuCid, class: 'secondLoader'
+                        }
+                    ).html(
+                        $('<img>', {
+                            src: 'images/loadingio_gear_32.gif',
+                            'border': 0
+                        })
+                    );
                 } else {
                     loadingHtml = '';
                 }
