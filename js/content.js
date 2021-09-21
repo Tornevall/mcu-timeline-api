@@ -451,7 +451,7 @@ function getNewContentElement(contentData) {
         {
             id: 'cb_' + apiContent["mcuid"],
             class: 'cardBadges'
-        }).html(finder === '*' ? phase : '').append(distribution);
+        }).html(phase).append(distribution);
 
     var returnThis = $('<div>').html(
         $('<div>', {
@@ -492,7 +492,7 @@ function getNewContentElement(contentData) {
         )
         .append($('<div>').html(postCreditData))
         .append($('<div>').html(contentNotes))
-        .append($('<div>').html(imdbLink).prepend(phase));
+        .append($('<div>').html(imdbLink));
 
     return returnThis.append(hiddenContent);
 }
