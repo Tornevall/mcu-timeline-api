@@ -57,7 +57,7 @@ function getApiContent() {
                         function data(mcuDataResponse) {
                             var mcuDataObject = mcuDataResponse['mcuTimeLine'][Object.keys(mcuDataResponse['mcuTimeLine'])[0]];
                             $('#mcuTableLoading_' + mcuCategoryIndexes[Object.keys(mcuDataResponse['mcuTimeLine'])[0]]).remove();
-                            dataDownloaded.push($(mcuDataObject).first()[0]['cid']);
+                            dataDownloaded.push(parseInt($(mcuDataObject).first()[0]['cid']));
                             mcuData[Object.keys(mcuDataResponse['mcuTimeLine'])[0]] = mcuDataObject;
                             if ($('span[id^=mcuTableLoading]').length === 0) {
                                 $('#find').prop('readonly', false);
@@ -286,7 +286,7 @@ function getRenderedTable(request) {
             var mcuCid = 0;
             var loadingHtml = '';
             for (var i = 0; i < mcuCategoryList.length; i++) {
-                mcuCid = mcuCategoryIndexes[mcuCategoryList[i]];
+                mcuCid = parseInt(mcuCategoryIndexes[mcuCategoryList[i]]);
 
                 if (!dataDownloaded.includes(mcuCid)) {
                     loadingHtml = $(
