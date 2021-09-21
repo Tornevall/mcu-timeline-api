@@ -83,7 +83,7 @@ function findit() {
             function () {
                 getTable('all_search')
             },
-            800
+            400
         );
     } else if (finder === '' && lastSearch !== '') {
         if (currentCategoryChoice === 'all_search') {
@@ -227,7 +227,7 @@ function getContentByFinder(contentData) {
     checkMcuOptions();
 
     // If there is no search string, allow always.
-    if (finder.trim() === '') {
+    if (finder.trim() === '' || finder === '*') {
         return true;
     }
 
@@ -290,7 +290,9 @@ function getRenderedTable(request) {
 
                 if (!dataDownloaded.includes(mcuCid)) {
                     loadingHtml = $(
-                        '<span>', {id: 'mcuTableLoading_' + mcuCid, class: 'secondLoader'})
+                        '<span>',
+                        {id: 'mcuTableLoading_' + mcuCid, class: 'secondLoader'}
+                    )
                         .html(
                             $('<img>', {
                                 src: 'images/loadingio_gear_32.gif',

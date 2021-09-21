@@ -1,0 +1,77 @@
+.clickable {
+    cursor: pointer;
+}
+
+#loader {
+    text-align: center;
+}
+
+#mcuTable {
+    text-align: left;
+}
+
+.main {
+    font-size: 18px;
+    font-width: bold;
+}
+
+.mainCategory {
+    font-size: 16px;
+    font-width: bold;
+}
+
+.distribution {
+    font-size: 14px;
+    right: 0;
+    position: absolute;
+}
+
+.secondLoader {
+    right: 0;
+    position: absolute;
+}
+
+.stringifiedText {
+    font-size: 14px;
+    font-weight: bold;
+    font-style: italic;
+    color: #004ea8;
+}
+
+.findReadOnly {
+    background: #ccc;
+}
+
+.stringifiedTitle {
+    font-size: 14px;
+    font-weight: bold;
+    font-style: italic;
+    color: #7400a8;
+    text-decoration: underline;
+}
+
+
+/** CSS used when API data is retrieved **/
+.mcu_title {
+    font-weight: bold;
+    font-size: 18px;
+    display: block;
+}
+
+.mcu_premiere {
+    font-style: italic;
+    margin-bottom: 10px;
+    font-size: 15px;
+    color: #001059;
+    font-weight: bold;
+    padding: 5px;
+    border: 1px solid black;
+}
+
+.mcu_description {
+    font-style: italic;
+    color: #017719;
+    margin-bottom: 10px;
+    font-size: 15px;
+    width: 600px;
+}
