@@ -293,7 +293,7 @@ function getRenderedTable(request) {
                         '<span>', {id: 'mcuTableLoading_' + mcuCid, class: 'secondLoader'})
                         .html(
                             $('<img>', {
-                                src: 'images/loadingio_gear32.gif',
+                                src: 'images/loadingio_gear_32.gif',
                                 'border': 0
                             })
                         );
