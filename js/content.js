@@ -439,27 +439,45 @@ function getNewContentElement(contentData) {
 
     var postCreditData = getStringifiedArray(apiContent["postcredits"], apiContent["mcuid"], 'Post Credit Scene Notes');
     var contentNotes = getStringifiedArray(apiContent["notes"], apiContent["mcuid"], 'Content Notes');
-
     var distribution = getBadge('distribution', apiContent, apiContent["distribution"], 'badge-dark');
+    var episodeData = null;
+
+    if (parseInt(apiContent["season"]) === 1) {
+        var episodeStringify = 'S' + apiContent["season"].padStart(2, '0') + 'E' + apiContent["episode"].padStart(2, '0');
+        episodeData = getBadge('seasonData', apiContent, episodeStringify, 'badge-primary');
+    }
     if (parseInt(apiContent["phase"]) > 0) {
         var phase = getBadge('phase', apiContent, 'Phase ' + apiContent["phase"], 'badge-info');
     } else {
         var phase = $('<span>', {}).html('');
     }
 
-    var cardBadges = $('<span>',
-        {
-            id: 'cb_' + apiContent["mcuid"],
-            class: 'cardBadges'
-        }).html(phase).append(distribution);
+    var cardBadges = $('<span>', {
+        id: 'cb_' + apiContent["mcuid"],
+        class: 'cardBadges'
+    }).append(episodeData).append(phase).append(distribution);
+
+    var useTitle = $('<span>', {
+        id: 'title_' + apiContent["mcuid"],
+        class: 'mcu_title'
+    }).html(apiContent["title"]);
+
+    var usePremiere = $('<span>', {
+        id: 'premiere_' + apiContent["mcuid"],
+        class: 'mcu_premire'
+    }).html(' (' + apiContent["premiere"] + ')');
+
+    useTitle.append(usePremiere);
 
     var returnThis = $('<div>').html(
         $('<div>', {
-            class: 'mcu_title', click: function () {
+            class: 'mcu_title',
+            id: 'mcu_title_' + apiContent["mcuid"],
+            click: function () {
                 getContentDetails(apiContent["mcuid"])
             }
-        }).html(apiContent.title + ' (' + apiContent["premiere"] + ')')
-            .append(cardBadges)
+        }).html(useTitle)
+            .prepend(cardBadges)
     );
 
     var imdbLink = '';

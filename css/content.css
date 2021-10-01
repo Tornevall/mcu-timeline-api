@@ -20,18 +20,6 @@
     font-width: bold;
 }
 
-.distribution {
-    font-size: 12px;
-}
-.phase {
-    font-size: 12px;
-    margin-right: 5px;
-}
-.cardBadges {
-    right: 10px;
-    position: absolute;
-}
-
 .secondLoader {
     right: 0;
     position: absolute;
@@ -80,4 +68,25 @@
     margin-bottom: 10px;
     font-size: 15px;
     width: 600px;
+}
+
+.seasonData {
+    font-style: italic !important;
+    font-size: 12px;
+    margin-right: 5px !important;
+}
+
+.distribution {
+    font-size: 12px;
+}
+
+.phase {
+    font-size: 12px;
+    margin-right: 5px;
+}
+
+.cardBadges {
+    right: 10px;
+    font-size: 12px !important;
+    position: absolute;
 }
