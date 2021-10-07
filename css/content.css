@@ -90,3 +90,9 @@
     font-size: 12px !important;
     position: absolute;
 }
+
+.linkArray {
+    margin-top: 5px;
+    border: 1px dotted gray;
+    padding: 5px;
+}

@@ -476,6 +476,7 @@ function getNewContentElement(contentData) {
         'episode': '',
         'phase': '',
         'category': '',
+        'links': []
     };
 
     for (var contentKey in apiContent) {
@@ -570,6 +571,9 @@ function getNewContentElement(contentData) {
             )
     }
 
+    var linkArray = getLinks(apiContent);
+    var linkArrayClass = linkArray !== null ? 'linkArray' : '';
+
     var hiddenContent = $('<div>', {id: 'info_' + apiContent["mcuid"], style: 'display:none'})
         .append(
             $('<div>', {class: 'mcu_description'}).html(apiContent["description"])
@@ -582,9 +586,68 @@ function getNewContentElement(contentData) {
         )
         .append($('<div>').html(postCreditData))
         .append($('<div>').html(contentNotes))
-        .append($('<div>').html(imdbLink));
+        .append($('<div>').html(imdbLink))
+        .append($('<div>', {class: linkArrayClass}).html(linkArray));
 
     return returnThis.append(hiddenContent);
+}
+
+/**
+ * Extract links from API response.
+ * @param mcuObject
+ */
+function getLinks(mcuObject) {
+    if (typeof mcuObject.links === 'object' && mcuObject.links !== null) {
+        var returnObject = $('<div>');
+        var url;
+        var hrefElement;
+        for (var i = 0; i < mcuObject.links.length; i++) {
+            url = mcuObject.links[i];
+            if (url.indexOf('www.youtube.com') > -1) {
+                hrefElement = getYoutube(url);
+                returnObject.append(hrefElement);
+            } else {
+                hrefElement = $('<a>',
+                    {
+                        'target': '_blank',
+                        'href': url
+                    }
+                );
+                hrefElement.html('Read more at ' + extractDomain(url) + '.');
+                returnObject.append(hrefElement)
+            }
+        }
+    } else {
+        returnObject = null;
+    }
+    return returnObject;
+}
+
+/**
+ * Create youtube element for MCU titles.
+ * @param url
+ * @returns {*|jQuery|HTMLElement}
+ */
+function getYoutube(url) {
+    var youtubeMatch = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/);
+
+    var useUrl = '';
+    if (youtubeMatch && youtubeMatch[2].length == 11) {
+        useUrl = 'https://www.youtube.com/embed/' + youtubeMatch[2];
+    }
+
+    if (useUrl === '') {
+        throw 'Bad Youtube URL';
+    }
+
+    return $('<iframe>', {
+        width: 560,
+        height: 315,
+        src: useUrl,
+        title: 'Watch on youtube!',
+        frameBorder: 0,
+        allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+    });
 }
 
 /**
@@ -624,4 +687,30 @@ function getStringifiedArray(contentArray, mcuid, typeName) {
         }
     }
     return returnStringified;
+}
+
+/**
+ * Extract domain name for use with a hrefs.
+ * @param url
+ * @returns {*}
+ * @link https://codepen.io/martinkrulltott/pen/GWWWQj
+ */
+function extractDomain(url) {
+    var domain;
+    //find & remove protocol (http, ftp, etc.) and get domain
+    if (url.indexOf("://") > -1) {
+        domain = url.split('/')[2];
+    } else {
+        domain = url.split('/')[0];
+    }
+
+    //find & remove www
+    if (domain.indexOf("www.") > -1) {
+        domain = domain.split('www.')[1];
+    }
+
+    domain = domain.split(':')[0]; //find & remove port number
+    domain = domain.split('?')[0]; //find & remove url params
+
+    return domain;
 }
