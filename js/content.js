@@ -20,11 +20,66 @@ var mcuCategoryList = [];
  */
 var mcuCategoryIndexes = {};
 var dataDownloaded = [];
+var lastDownloadedTimelineEntry = '';
+var lastTimelineEntryDate = '';
+
+function getNewContent() {
+    $.ajax(
+        {
+            method: 'GET',
+            url: mcuApiUrl + '/latest?limit=1'
+        }
+    ).done(
+        function (d) {
+            if (typeof d[0] !== "undefined") {
+                lastTimelineEntryDate = d[0]['updated'];
+                if (lastDownloadedTimelineEntry === '') {
+                    lastDownloadedTimelineEntry = lastTimelineEntryDate;
+                } else if (lastTimelineEntryDate !== lastDownloadedTimelineEntry) {
+                    $('#timeLineStatus').html('Entry updates discovered.');
+                    getDataByIndexes();
+                    lastDownloadedTimelineEntry = lastTimelineEntryDate;
+                }
+            }
+        }
+    ).fail(function (faildata) {
+        getCentralFail(faildata);
+    });
+}
+
+/**
+ * Get new refreshed data by the primary category indexes.
+ */
+function getDataByIndexes() {
+    $('#timeLineStatus').html('Entry updates discovered.');
+    for (var categoryName in mcuCategoryIndexes) {
+        cIdx = mcuCategoryIndexes[categoryName];
+        if (cIdx > 0) {
+            $.ajax(
+                {
+                    url: mcuApiUrl + '/timeline/category/' + cIdx,
+                    method: "GET",
+                    dataType: 'json'
+                }
+            ).done(
+                function data(mcuDataResponse) {
+                    var mcuDataObject = mcuDataResponse['mcuTimeLine'][Object.keys(mcuDataResponse['mcuTimeLine'])[0]];
+                    $('#timeLineStatus').html("Updated " + Object.keys(mcuDataResponse['mcuTimeLine'])[0]);
+                    mcuData[Object.keys(mcuDataResponse['mcuTimeLine'])[0]] = mcuDataObject;
+                }
+            ).fail(function (faildata) {
+                getCentralFail(faildata);
+            });
+        }
+    }
+}
 
 /**
  * Initialize API update.
  */
 function getApiContent() {
+    $('#timeLineStatus').html('Initializing API.');
+    setInterval('getNewContent()', 5000);
     $('#loader').html($('<img>', {src: 'images/loadingio_wedges_64.gif', border: "none"}));
 
     $.ajax(
@@ -41,6 +96,8 @@ function getApiContent() {
                 categoryIndexes.push(data[categoryIndex]['cid']);
                 mcuCategoryIndexes[data[categoryIndex]['category']] = data[categoryIndex]['cid'];
             }
+            $('#timeLineStatus').html('Fetching categories...');
+
             mcuCategoryList = getCategories();
             getTable('all');
 
@@ -56,19 +113,34 @@ function getApiContent() {
                     ).done(
                         function data(mcuDataResponse) {
                             var mcuDataObject = mcuDataResponse['mcuTimeLine'][Object.keys(mcuDataResponse['mcuTimeLine'])[0]];
+                            var categoryId = parseInt($(mcuDataObject).first()[0]['cid']);
+                            $('#timeLineStatus').html('Downloaded category ' + categoryId + '.');
                             $('#mcuTableLoading_' + mcuCategoryIndexes[Object.keys(mcuDataResponse['mcuTimeLine'])[0]]).remove();
-                            dataDownloaded.push(parseInt($(mcuDataObject).first()[0]['cid']));
+                            dataDownloaded.push(categoryId);
                             mcuData[Object.keys(mcuDataResponse['mcuTimeLine'])[0]] = mcuDataObject;
                             if ($('span[id^=mcuTableLoading]').length === 0) {
+                                $('#timeLineStatus').html('Data loaded!');
                                 $('#find').prop('readonly', false);
                                 $('#find').removeClass('findReadOnly');
                             }
                         }
-                    );
+                    ).fail(function (faildata) {
+                        getCentralFail(faildata);
+                    });
                 }
             }
         }
-    );
+    ).fail(function (faildata) {
+        getCentralFail(faildata);
+    });
+}
+
+function getCentralFail(faildata) {
+    if (typeof faildata.responseText !== 'undefined') ;
+    {
+        var parseError = JSON.parse(faildata.responseText);
+        $('#timeLineStatus').html('API Fail: ' + parseError.error.message);
+    }
 }
 
 /**
