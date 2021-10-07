@@ -119,9 +119,15 @@ function getApiContent() {
                             dataDownloaded.push(categoryId);
                             mcuData[Object.keys(mcuDataResponse['mcuTimeLine'])[0]] = mcuDataObject;
                             if ($('span[id^=mcuTableLoading]').length === 0) {
-                                $('#timeLineStatus').html('Data loaded!');
+                                $('#timeLineStatus').html('');
                                 $('#find').prop('readonly', false);
                                 $('#find').removeClass('findReadOnly');
+                                var queryString = window.location.search;
+                                const urlParams = new URLSearchParams(queryString);
+                                if (urlParams.get('find') !== '') {
+                                    $('#find').val(urlParams.get('find'));
+                                    findit();
+                                }
                             }
                         }
                     ).fail(function (faildata) {
