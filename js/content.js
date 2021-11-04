@@ -75,6 +75,16 @@ function getDataByIndexes() {
 }
 
 /**
+ * Look for query parameters in url.
+ * @param findQueryKey
+ * @returns {*|string}
+ */
+function getQueryString(findQueryKey) {
+    var queryString = window.location.search;
+    return new URLSearchParams(queryString).get(findQueryKey);
+}
+
+/**
  * Initialize API update.
  */
 function getApiContent() {
@@ -122,10 +132,9 @@ function getApiContent() {
                                 $('#timeLineStatus').html('');
                                 $('#find').prop('readonly', false);
                                 $('#find').removeClass('findReadOnly');
-                                var queryString = window.location.search;
-                                const urlParams = new URLSearchParams(queryString);
-                                if (urlParams.get('find') !== '') {
-                                    $('#find').val(urlParams.get('find'));
+
+                                if (getQueryString('q') !== '') {
+                                    $('#find').val(getQueryString('q'));
                                     findit();
                                 }
                             }
@@ -400,7 +409,9 @@ function getRenderedTable(request) {
         default:
             var contentList = getListByKey(request);
             var contentData;
+            var lastId;
 
+            var contentListCount = 0;
             for (var listId = 0; listId < contentList.length; listId++) {
                 contentData = contentList[listId];
 
@@ -413,6 +424,9 @@ function getRenderedTable(request) {
                 if (contentData["tv"] === "0" && !includeFilm) {
                     continue;
                 }
+
+                contentListCount++;
+                lastId = contentData.mcuid;
 
                 renderHtml = $(
                     '<div>',
@@ -427,6 +441,11 @@ function getRenderedTable(request) {
                 jqueryTable.append(
                     $('<ul>', {id: 'list_' + contentData.mcuid}).html(renderHtml)
                 );
+            }
+            if (contentListCount === 1 && getQueryString('q') !== '') {
+                setTimeout(function () {
+                    getContentDetails(lastId);
+                }, 1000)
             }
     }
 
