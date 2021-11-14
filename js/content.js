@@ -623,7 +623,7 @@ function getNewContentElement(contentData) {
  */
 function getLinks(mcuObject) {
     if (typeof mcuObject.links === 'object' && mcuObject.links !== null) {
-        var returnObject = $('<div>');
+        var returnObject = $('<div>', {style: 'display:block;'});
         var url;
         var hrefElement;
         for (var i = 0; i < mcuObject.links.length; i++) {
@@ -635,7 +635,8 @@ function getLinks(mcuObject) {
                 hrefElement = $('<a>',
                     {
                         'target': '_blank',
-                        'href': url
+                        'href': url,
+                        'style': 'display: block;'
                     }
                 );
                 hrefElement.html('Read more at ' + extractDomain(url) + '.');
