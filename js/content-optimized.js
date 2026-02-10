@@ -12,8 +12,6 @@
 const MCUClient = {
     // Configuration
     API_URL: 'https://api.earth616.org/api/mcu',
-    CACHE_KEY: 'mcu_timeline_cache',
-    CACHE_EXPIRY: 6 * 60 * 60 * 1000, // 6 hours
     BATCH_SIZE: 50,
 
     // State
@@ -33,7 +31,6 @@ const MCUClient = {
 
         this.setupEventListeners();
         this.loadData();
-        this.startAutoRefresh();
     },
 
     // Event Listeners
@@ -81,20 +78,10 @@ const MCUClient = {
         });
     },
 
-    // Load Data - Optimized batched call
+    // Load Data - Always fresh from API
     async loadData() {
         try {
             this.setStatus('Loading MCU Timeline...', 'loading');
-
-            // Check cache first
-            const cached = this.getFromCache();
-            if (cached) {
-                this.allData = cached;
-                this.renderUI();
-                this.applyFilters();  // Trigger filters automatically
-                this.setStatus('Ready', 'ready');
-                return;
-            }
 
             // Step 1: Fetch all categories
             const categoriesResponse = await fetch(`${this.API_URL}/categories`);
@@ -120,52 +107,15 @@ const MCUClient = {
             // Wait for all category requests to complete
             await Promise.all(categoryPromises);
 
-            // Process and cache data
-            this.saveToCache();
+            // Process and display data
             this.renderUI();
             this.applyFilters();  // Trigger filters automatically
             this.setStatus('Ready', 'ready');
         } catch (error) {
-            this.setStatus('Error loading data. Using cached version.', 'error');
-
-            // Fallback to cache if available
-            const cached = this.getFromCache();
-            if (cached) {
-                this.allData = cached;
-                this.renderUI();
-                this.applyFilters();  // Trigger filters automatically
-            }
+            this.setStatus('Error loading data. Please try again.', 'error');
         }
     },
 
-    // Cache Management
-    getFromCache() {
-        try {
-            const cached = localStorage.getItem(this.CACHE_KEY);
-            if (!cached) return null;
-
-            const { data, timestamp } = JSON.parse(cached);
-            if (Date.now() - timestamp > this.CACHE_EXPIRY) {
-                localStorage.removeItem(this.CACHE_KEY);
-                return null;
-            }
-
-            return data;
-        } catch (e) {
-            return null;
-        }
-    },
-
-    saveToCache() {
-        try {
-            localStorage.setItem(this.CACHE_KEY, JSON.stringify({
-                data: this.allData,
-                timestamp: Date.now()
-            }));
-        } catch (e) {
-            // Silently fail if storage is full
-        }
-    },
 
     // Search and Filter
     handleSearch() {
@@ -180,10 +130,13 @@ const MCUClient = {
 
         // ALWAYS START FROM allData - don't use previously filtered data
         let filtered = this.allData.filter(item => {
-            // Classification: ONLY tv=1 or animated=1 means TV/Series
-            // Everything else is a Film, regardless of other fields
-            const isTV = (item.tv == 1) || (item.animated == 1);
+            // Classification logic:
+            // tv=1 → TV/Series (may be animated or live-action)
+            // tv=0 → Film (may be animated or live-action)
+            // NOTE: animated flag only indicates presentation style, NOT classification
+            const isTV = item.tv === 1;
 
+            // Apply checkbox filters
             if (!includeTv && isTV) return false;
             if (!includeFilm && !isTV) return false;
 
@@ -276,27 +229,68 @@ const MCUClient = {
             return;
         }
 
-        // Group TV shows by series (extratitle) and films separately
+        // Helper function to extract series name for grouping
+        const getSeriesName = (item) => {
+            // Normalize tv field (handle both string and number)
+            const tvValue = parseInt(item.tv, 10);
+
+            // PRIORITY 1: If extratitle exists and is not empty, use it ALWAYS
+            // extratitle is explicitly set and should NEVER be overridden
+            if (item.extratitle && item.extratitle.trim() !== '') {
+                return item.extratitle.trim();
+            }
+
+            // PRIORITY 2: For TV series only (tv=1), extract series name from title
+            // Split on " - " first (handles "Marvel Studios: Legends - Wanda")
+            // Then try ":" (handles "I am Groot: Groot's First Steps")
+            if (tvValue === 1 && item.title && typeof item.title === 'string') {
+                // Try " - " separator first
+                const dashParts = item.title.split(' - ');
+                if (dashParts.length > 1) {
+                    const seriesName = dashParts[0].trim();
+                    if (seriesName && seriesName.length > 0 && seriesName !== item.title) {
+                        return seriesName;
+                    }
+                }
+
+                // Try ":" separator for titles like "I am Groot: Groot's First Steps"
+                const colonParts = item.title.split(':');
+                if (colonParts.length > 1) {
+                    const seriesName = colonParts[0].trim();
+                    if (seriesName && seriesName.length > 0 && seriesName !== item.title) {
+                        return seriesName;
+                    }
+                }
+            }
+
+            // No grouping - return null for standalone item
+            return null;
+        };
+
+        // Group ALL items by series name (extratitle, derived title, or individual)
         const grouped = {};
-        const standaloneFilms = [];
+        const standaloneItems = [];
 
         data.forEach(item => {
-            const isTV = item.tv === 1 || item.animated === 1;
+            // Normalize tv field (handle both string and number)
+            const tvValue = parseInt(item.tv, 10);
+            const isTV = tvValue === 1;
+            const seriesName = getSeriesName(item);
 
-            // Group by extratitle if it exists (works for both TV and documentaries)
-            if (item.extratitle && item.extratitle.trim()) {
-                const seriesKey = item.extratitle;
-                if (!grouped[seriesKey]) {
-                    grouped[seriesKey] = {
-                        series: item.extratitle,
+            // Group items with a series name
+            if (seriesName) {
+                if (!grouped[seriesName]) {
+                    grouped[seriesName] = {
+                        series: seriesName,
                         category: item.category,
-                        episodes: []
+                        items: [],
+                        isTV: isTV
                     };
                 }
-                grouped[seriesKey].episodes.push(item);
+                grouped[seriesName].items.push(item);
             } else {
-                // Standalone films/TV without extratitle
-                standaloneFilms.push(item);
+                // Standalone items with no series grouping
+                standaloneItems.push(item);
             }
         });
 
@@ -305,23 +299,23 @@ const MCUClient = {
         const start = (this.currentPage - 1) * this.BATCH_SIZE;
         const end = start + this.BATCH_SIZE;
 
-        // Combine grouped series and standalone films for pagination
+        // Combine grouped series and standalone items for pagination
         const allItems = [];
         Object.values(grouped).forEach(seriesGroup => {
             allItems.push(seriesGroup);
         });
-        standaloneFilms.forEach(film => {
-            allItems.push(film);
+        standaloneItems.forEach(item => {
+            allItems.push(item);
         });
 
         const batch = allItems.slice(start, end);
 
         batch.forEach(item => {
-            if (item.episodes) {
-                // This is a series group
+            if (item.items) {
+                // This is a grouped series/collection
                 html += this.createSeriesGroup(item);
             } else {
-                // This is a standalone film or TV episode
+                // This is a standalone item
                 html += this.createCard(item);
             }
         });
@@ -344,49 +338,83 @@ const MCUClient = {
         const phaseClass = seriesGroup.category ? `phase-${seriesGroup.category.toLowerCase().replace(/\s+/g, '-')}` : 'non-phase';
         const groupId = `group-${Math.random().toString(36).substr(2, 9)}`;
 
-        // Get unique seasons
-        const seasons = new Set(seriesGroup.episodes.map(ep => ep.season));
+        // Use series name directly (no special IMDB handling needed)
+        const displayName = seriesGroup.series;
+
+        // Determine if this is a multi-season series or a grouped collection
+        const hasSeasons = seriesGroup.items.some(item => item.season && item.season > 0);
+        const seasons = new Set(seriesGroup.items.map(ep => ep.season).filter(s => s > 0));
         const hasMultipleSeasons = seasons.size > 1;
 
-        // Get series IMDB (from first episode)
-        const seriesImdb = seriesGroup.episodes[0]?.imdb;
+        // Get series IMDB (from first item)
+        const seriesImdb = seriesGroup.items[0]?.imdb;
         const seriesImdbHtml = seriesImdb ?
             `<div style="margin-bottom: 15px; padding: 10px; background: #e7f3ff; border-left: 3px solid #0066cc; border-radius: 4px;">
                 <strong>🎬 Series IMDB:</strong> <a href="https://www.imdb.com/title/${seriesImdb}/" target="_blank" style="color: #0066cc; text-decoration: underline;">${seriesImdb}</a>
             </div>` : '';
 
-        const episodesHtml = seriesGroup.episodes
-            .sort((a, b) => {
-                const aNum = parseInt(a.season) * 1000 + parseInt(a.episode);
-                const bNum = parseInt(b.season) * 1000 + parseInt(b.episode);
-                return aNum - bNum;
-            })
-            .map((ep, idx) => {
-                const epId = `${groupId}-ep-${idx}`;
-                const premiere = ep.premiere && ep.premiere !== '0000-00-00' ? new Date(ep.premiere).toLocaleDateString() : 'TBA';
-                const episodeImdbLink = ep.imdbepisode ? `<a href="https://www.imdb.com/title/${ep.imdbepisode}/" target="_blank" style="color: #d9534f; text-decoration: underline; font-weight: 600;">${ep.imdbepisode}</a>` : '<span style="color: #999;">N/A</span>';
-                const digitalDate = ep.digital && ep.digital !== '0000-00-00' ? new Date(ep.digital).toLocaleDateString() : 'N/A';
+        let itemsHtml = '';
 
-                return `
-                    <div class="episode-item" id="${epId}" style="cursor: pointer; padding: 10px 12px; border-left: 3px solid #ccc; margin: 5px 0; background: #f9f9f9; border-radius: 4px; transition: all 0.2s; user-select: none;">
-                        <div style="font-size: 13px; color: #666; font-weight: 500;">
-                            <strong style="color: #d9534f;">S${String(ep.season).padStart(2, '0')}E${String(ep.episode).padStart(2, '0')}</strong> - ${this.escapeHtml(ep.title || 'Untitled')}
-                            <span style="color: #999;"> (${premiere})</span>
+        if (hasSeasons) {
+            // TV series with episodes - sort by season/episode
+            itemsHtml = seriesGroup.items
+                .sort((a, b) => {
+                    const aNum = (parseInt(a.season) || 0) * 1000 + (parseInt(a.episode) || 0);
+                    const bNum = (parseInt(b.season) || 0) * 1000 + (parseInt(b.episode) || 0);
+                    return aNum - bNum;
+                })
+                .map((item, idx) => {
+                    const itemId = `${groupId}-item-${idx}`;
+                    const premiere = item.premiere && item.premiere !== '0000-00-00' ? new Date(item.premiere).toLocaleDateString() : 'TBA';
+                    const itemImdbLink = item.imdbepisode ? `<a href="https://www.imdb.com/title/${item.imdbepisode}/" target="_blank" style="color: #d9534f; text-decoration: underline; font-weight: 600;">${item.imdbepisode}</a>` :
+                                        (item.imdb ? `<a href="https://www.imdb.com/title/${item.imdb}/" target="_blank" style="color: #d9534f; text-decoration: underline; font-weight: 600;">${item.imdb}</a>` : '<span style="color: #999;">N/A</span>');
+                    const digitalDate = item.digital && item.digital !== '0000-00-00' ? new Date(item.digital).toLocaleDateString() : 'N/A';
+
+                    return `
+                        <div class="episode-item" id="${itemId}" style="cursor: pointer; padding: 10px 12px; border-left: 3px solid #ccc; margin: 5px 0; background: #f9f9f9; border-radius: 4px; transition: all 0.2s; user-select: none;">
+                            <div style="font-size: 13px; color: #666; font-weight: 500;">
+                                <strong style="color: #d9534f;">S${String(item.season || 0).padStart(2, '0')}E${String(item.episode || 0).padStart(2, '0')}</strong> - ${this.escapeHtml(item.title || 'Untitled')}
+                                <span style="color: #999;"> (${premiere})</span>
+                            </div>
+                            <div class="episode-details-content" style="display: none; margin-top: 10px; padding: 10px; background: #ffffff; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 12px; color: #333; line-height: 1.8;">
+                                <div style="font-weight: 600; color: #d9534f; margin-bottom: 8px;">Episode IMDB:</div>
+                                <div style="margin-bottom: 12px;"><strong>🎬 Link:</strong> ${itemImdbLink}</div>
+                                <div style="margin-top: 6px;"><strong>📅 Premiere Date:</strong> ${premiere}</div>
+                                ${item.digital && item.digital !== '0000-00-00' ? `<div style="margin-top: 6px;"><strong>💾 Digital Release:</strong> ${digitalDate}</div>` : ''}
+                                ${item.mcutime ? `<div style="margin-top: 6px;"><strong>⏰ MCU Timeline:</strong> ${this.escapeHtml(item.mcutime)}</div>` : ''}
+                                ${item.contentinformation && typeof item.contentinformation === 'string' ? `<div style="margin-top: 6px;"><strong>📝 Info:</strong> ${this.escapeHtml(item.contentinformation.substring(0, 200))}</div>` : ''}
+                            </div>
                         </div>
-                        <div class="episode-details-content" style="display: none; margin-top: 10px; padding: 10px; background: #ffffff; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 12px; color: #333; line-height: 1.8;">
-                            <div style="font-weight: 600; color: #d9534f; margin-bottom: 8px;">Episode IMDB:</div>
-                            <div style="margin-bottom: 12px;"><strong>🎬 Link:</strong> ${episodeImdbLink}</div>
-                            <div style="margin-top: 6px;"><strong>📅 Premiere Date:</strong> ${premiere}</div>
-                            ${ep.digital && ep.digital !== '0000-00-00' ? `<div style="margin-top: 6px;"><strong>💾 Digital Release:</strong> ${digitalDate}</div>` : ''}
-                            ${ep.mcutime ? `<div style="margin-top: 6px;"><strong>⏰ MCU Timeline:</strong> ${this.escapeHtml(ep.mcutime)}</div>` : ''}
-                            ${ep.contentinformation ? `<div style="margin-top: 6px;"><strong>📝 Info:</strong> ${this.escapeHtml(ep.contentinformation.substring(0, 200))}</div>` : ''}
+                    `;
+                }).join('');
+        } else {
+            // Grouped content without episodes (documentaries, specials, etc.)
+            itemsHtml = seriesGroup.items
+                .map((item, idx) => {
+                    const itemId = `${groupId}-item-${idx}`;
+                    const premiere = item.premiere && item.premiere !== '0000-00-00' ? new Date(item.premiere).toLocaleDateString() : 'TBA';
+                    const itemImdbLink = item.imdb ? `<a href="https://www.imdb.com/title/${item.imdb}/" target="_blank" style="color: #d9534f; text-decoration: underline; font-weight: 600;">${item.imdb}</a>` : '<span style="color: #999;">N/A</span>';
+
+                    return `
+                        <div class="episode-item" id="${itemId}" style="cursor: pointer; padding: 10px 12px; border-left: 3px solid #ccc; margin: 5px 0; background: #f9f9f9; border-radius: 4px; transition: all 0.2s; user-select: none;">
+                            <div style="font-size: 13px; color: #666; font-weight: 500;">
+                                ${this.escapeHtml(item.title || 'Untitled')}
+                                <span style="color: #999;"> (${premiere})</span>
+                            </div>
+                            <div class="episode-details-content" style="display: none; margin-top: 10px; padding: 10px; background: #ffffff; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 12px; color: #333; line-height: 1.8;">
+                                <div style="font-weight: 600; color: #d9534f; margin-bottom: 8px;">Details:</div>
+                                <div style="margin-bottom: 12px;"><strong>🎬 IMDB:</strong> ${itemImdbLink}</div>
+                                <div style="margin-top: 6px;"><strong>📅 Premiere Date:</strong> ${premiere}</div>
+                                ${item.mcutime ? `<div style="margin-top: 6px;"><strong>⏰ MCU Timeline:</strong> ${this.escapeHtml(item.mcutime)}</div>` : ''}
+                                ${item.contentinformation && typeof item.contentinformation === 'string' ? `<div style="margin-top: 6px;"><strong>📝 Info:</strong> ${this.escapeHtml(item.contentinformation.substring(0, 200))}</div>` : ''}
+                            </div>
                         </div>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+        }
 
         // Season header if multiple seasons
-        const seasonHeaderHtml = hasMultipleSeasons ?
+        const seasonHeaderHtml = (hasSeasons && hasMultipleSeasons) ?
             `<div style="padding: 8px 12px; background: #f0f0f0; border-radius: 4px; font-size: 12px; color: #666; margin-bottom: 10px; font-weight: 600;">
                 📺 Multiple Seasons (${seasons.size} seasons)
             </div>` : '';
@@ -395,22 +423,23 @@ const MCUClient = {
             <div class="mcu-card" style="grid-column: 1/-1;">
                 <div class="card-header ${phaseClass}" style="cursor: pointer; user-select: none;" onclick="event.stopPropagation(); const body = this.nextElementSibling; body.style.display = body.style.display === 'none' ? 'block' : 'none'; this.style.opacity = this.style.opacity === '0.7' ? '1' : '0.7';">
                     <div class="card-title" style="margin: 0;">
-                        📺 ${this.escapeHtml(seriesGroup.series)}
+                        ${seriesGroup.isTV ? '📺' : '🎬'} ${this.escapeHtml(displayName)}
                     </div>
                 </div>
                 <div class="card-body" style="background: #fafafa;">
                     ${seriesImdbHtml}
                     ${seasonHeaderHtml}
-                    ${episodesHtml}
+                    ${itemsHtml}
                 </div>
-                <div class="card-footer">${this.escapeHtml(seriesGroup.category || 'Uncategorized')} • ${seriesGroup.episodes.length} episodes</div>
+                <div class="card-footer">${this.escapeHtml(seriesGroup.category || 'Uncategorized')} • ${seriesGroup.items.length} ${hasSeasons ? 'episodes' : 'items'}</div>
             </div>
         `;
     },
 
     createCard(item) {
         const phaseClass = item.category ? `phase-${item.category.toLowerCase().replace(/\s+/g, '-')}` : 'non-phase';
-        const isTV = (item.tv == 1) || (item.animated == 1);
+        const tvValue = parseInt(item.tv, 10);
+        const isTV = tvValue === 1;
         const type = isTV ? '📺 TV Series' : '🎬 Film';
         const premiere = item.premiere !== '0000-00-00' ? new Date(item.premiere).toLocaleDateString() : 'TBA';
 
@@ -430,7 +459,7 @@ const MCUClient = {
                             <div class="meta-label">Release</div>
                             <div class="meta-value">${premiere}</div>
                         </div>
-                        ${isTV && item.season ? `
+                        ${isTV && item.season && item.season > 0 ? `
                         <div class="meta-item">
                             <div class="meta-label">Season</div>
                             <div class="meta-value">${item.season}</div>
@@ -460,21 +489,6 @@ const MCUClient = {
         return text.replace(/[&<>"']/g, m => map[m]);
     },
 
-    // Auto Refresh
-    startAutoRefresh() {
-        setInterval(() => {
-            // Check for updates every 5 minutes
-            fetch(`${this.API_URL}/latest?limit=1`)
-                .then(r => r.json())
-                .then(data => {
-                    if (data[0] && data[0].updated !== this.lastUpdate) {
-                        this.lastUpdate = data[0].updated;
-                        this.loadData();
-                    }
-                })
-                .catch(e => null);
-        }, 5 * 60 * 1000);
-    },
 
     // Status Badge
     setStatus(text, type) {
