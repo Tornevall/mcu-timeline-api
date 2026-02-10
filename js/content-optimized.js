@@ -42,25 +42,42 @@ const MCUClient = {
 
         // Search input
         $('#searchInput').on('keyup', function() {
-            console.log('Search triggered');
             self.handleSearch();
         });
 
         // TV Shows checkbox
         $('#includeTv').on('change', function() {
-            console.log('TV checkbox changed to:', $(this).is(':checked'));
             self.applyFilters();
         });
 
         // Films checkbox
         $('#includeFilm').on('change', function() {
-            console.log('Film checkbox changed to:', $(this).is(':checked'));
             self.applyFilters();
         });
 
         // Window scroll
         $(window).on('scroll', function() {
             self.handleScroll();
+        });
+
+        // Episode items - EVENT DELEGATION for dynamic content
+        $(document).on('click', '.episode-item', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const $item = $(this);
+            const $detailsDiv = $item.find('.episode-details-content');
+            const isVisible = $detailsDiv.is(':visible');
+
+            // Toggle visibility
+            if (isVisible) {
+                $detailsDiv.slideUp(200, function() {
+                    $item.css('background', '#f9f9f9').css('border-left-color', '#ccc');
+                });
+            } else {
+                $detailsDiv.slideDown(200, function() {
+                    $item.css('background', '#fff3cd').css('border-left-color', '#0066cc');
+                });
+            }
         });
     },
 
@@ -76,7 +93,6 @@ const MCUClient = {
                 this.renderUI();
                 this.applyFilters();  // Trigger filters automatically
                 this.setStatus('Ready', 'ready');
-                console.log('Loaded from cache');
                 return;
             }
 
@@ -98,7 +114,7 @@ const MCUClient = {
                             });
                         }
                     })
-                    .catch(err => console.warn(`Failed to load category ${cat.cid}:`, err))
+                    .catch(err => null)
             );
 
             // Wait for all category requests to complete
@@ -109,10 +125,7 @@ const MCUClient = {
             this.renderUI();
             this.applyFilters();  // Trigger filters automatically
             this.setStatus('Ready', 'ready');
-
-            console.log(`Loaded ${this.allData.length} MCU entries from ${categories.length} categories`);
         } catch (error) {
-            console.error('Failed to load MCU data:', error);
             this.setStatus('Error loading data. Using cached version.', 'error');
 
             // Fallback to cache if available
@@ -150,62 +163,47 @@ const MCUClient = {
                 timestamp: Date.now()
             }));
         } catch (e) {
-            console.warn('Failed to cache data:', e);
+            // Silently fail if storage is full
         }
     },
 
     // Search and Filter
     handleSearch() {
-        const query = $('#searchInput').val().toLowerCase().trim();
         this.currentPage = 1;
-
-        if (!query) {
-            this.applyFilters();
-            return;
-        }
-
-        this.filteredData = this.allData.filter(item => {
-            const text = `${item.title || ''} ${item.extratitle || ''} ${item.keywords || ''}`.toLowerCase();
-            return text.includes(query);
-        });
-
         this.applyFilters();
-        this.renderContent();
     },
 
     applyFilters() {
+        const query = $('#searchInput').val().toLowerCase().trim();
         const includeTv = $('#includeTv').is(':checked');
         const includeFilm = $('#includeFilm').is(':checked');
 
-        console.log('🔄 applyFilters called - TV:', includeTv, 'Film:', includeFilm);
-        console.log('📊 Starting data count:', this.allData.length);
-
         // ALWAYS START FROM allData - don't use previously filtered data
         let filtered = this.allData.filter(item => {
-            const isTV = item.tv === 1 || item.animated === 1;
+            // Classification: ONLY tv=1 or animated=1 means TV/Series
+            // Everything else is a Film, regardless of other fields
+            const isTV = (item.tv == 1) || (item.animated == 1);
 
-            // Items with extratitle are treated as TV/series content
-            // (even if tv=0, they're grouped with TV series)
-            const hasExtratitle = item.extratitle && item.extratitle.trim();
-            const isTVContent = isTV || hasExtratitle;
-            const isFilmContent = !isTVContent;
-
-            if (!includeTv && isTVContent) return false;
-            if (!includeFilm && isFilmContent) return false;
+            if (!includeTv && isTV) return false;
+            if (!includeFilm && !isTV) return false;
 
             return true;
         });
 
-        console.log('📊 After type filter:', filtered.length);
-
         // Filter by category
         if (this.currentCategory !== 'all') {
             filtered = filtered.filter(item => item.category === this.currentCategory);
-            console.log('📊 After category filter:', filtered.length);
+        }
+
+        // Apply search query
+        if (query) {
+            filtered = filtered.filter(item => {
+                const text = `${item.title || ''} ${item.extratitle || ''} ${item.keywords || ''}`.toLowerCase();
+                return text.includes(query);
+            });
         }
 
         this.filteredData = filtered;
-        console.log('✅ filteredData set to:', this.filteredData.length);
 
         this.currentPage = 1;
         this.renderContent();
@@ -268,8 +266,6 @@ const MCUClient = {
     renderContent() {
         const data = this.filteredData;
 
-        console.log('🎨 renderContent called with', data.length, 'items');
-
         if (data.length === 0) {
             $('#mainContent').html(`
                 <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
@@ -277,7 +273,6 @@ const MCUClient = {
                     <div style="color: #999; font-size: 16px;">No results found</div>
                 </div>
             `);
-            console.log('❌ No data to render');
             return;
         }
 
@@ -288,12 +283,9 @@ const MCUClient = {
         data.forEach(item => {
             const isTV = item.tv === 1 || item.animated === 1;
 
-            console.log(`📺 Item: "${item.title}" | isTV:${isTV} | tv:${item.tv} | animated:${item.animated} | extratitle:"${item.extratitle}"`);
-
             // Group by extratitle if it exists (works for both TV and documentaries)
             if (item.extratitle && item.extratitle.trim()) {
                 const seriesKey = item.extratitle;
-                console.log(`  ↳ GROUPING into series: "${seriesKey}"`);
                 if (!grouped[seriesKey]) {
                     grouped[seriesKey] = {
                         series: item.extratitle,
@@ -304,7 +296,6 @@ const MCUClient = {
                 grouped[seriesKey].episodes.push(item);
             } else {
                 // Standalone films/TV without extratitle
-                console.log(`  ↳ ADDING as STANDALONE (no extratitle)`);
                 standaloneFilms.push(item);
             }
         });
@@ -323,13 +314,7 @@ const MCUClient = {
             allItems.push(film);
         });
 
-        console.log('📦 Grouped:', Object.keys(grouped).length, 'series');
-        console.log('🎬 Standalone items:', standaloneFilms.length);
-        console.log('📊 Total allItems:', allItems.length);
-
         const batch = allItems.slice(start, end);
-
-        console.log('📄 Rendering batch of', batch.length, 'items');
 
         batch.forEach(item => {
             if (item.episodes) {
@@ -342,7 +327,6 @@ const MCUClient = {
         });
 
         $('#mainContent').html(html);
-        console.log('✅ HTML inserted into mainContent');
 
         // Update footer with pagination info
         const totalPages = Math.ceil(allItems.length / this.BATCH_SIZE);
@@ -358,6 +342,18 @@ const MCUClient = {
 
     createSeriesGroup(seriesGroup) {
         const phaseClass = seriesGroup.category ? `phase-${seriesGroup.category.toLowerCase().replace(/\s+/g, '-')}` : 'non-phase';
+        const groupId = `group-${Math.random().toString(36).substr(2, 9)}`;
+
+        // Get unique seasons
+        const seasons = new Set(seriesGroup.episodes.map(ep => ep.season));
+        const hasMultipleSeasons = seasons.size > 1;
+
+        // Get series IMDB (from first episode)
+        const seriesImdb = seriesGroup.episodes[0]?.imdb;
+        const seriesImdbHtml = seriesImdb ?
+            `<div style="margin-bottom: 15px; padding: 10px; background: #e7f3ff; border-left: 3px solid #0066cc; border-radius: 4px;">
+                <strong>🎬 Series IMDB:</strong> <a href="https://www.imdb.com/title/${seriesImdb}/" target="_blank" style="color: #0066cc; text-decoration: underline;">${seriesImdb}</a>
+            </div>` : '';
 
         const episodesHtml = seriesGroup.episodes
             .sort((a, b) => {
@@ -365,23 +361,46 @@ const MCUClient = {
                 const bNum = parseInt(b.season) * 1000 + parseInt(b.episode);
                 return aNum - bNum;
             })
-            .map(ep => `
-                <div style="padding: 8px 12px; border-left: 3px solid #ccc; margin: 5px 0; background: #f9f9f9;">
-                    <div style="font-size: 13px; color: #666;">
-                        <strong>S${String(ep.season).padStart(2, '0')}E${String(ep.episode).padStart(2, '0')}</strong> - ${this.escapeHtml(ep.title || 'Untitled')}
-                        ${ep.premiere && ep.premiere !== '0000-00-00' ? `<span style="color: #999;"> (${new Date(ep.premiere).toLocaleDateString()})</span>` : ''}
+            .map((ep, idx) => {
+                const epId = `${groupId}-ep-${idx}`;
+                const premiere = ep.premiere && ep.premiere !== '0000-00-00' ? new Date(ep.premiere).toLocaleDateString() : 'TBA';
+                const episodeImdbLink = ep.imdbepisode ? `<a href="https://www.imdb.com/title/${ep.imdbepisode}/" target="_blank" style="color: #d9534f; text-decoration: underline; font-weight: 600;">${ep.imdbepisode}</a>` : '<span style="color: #999;">N/A</span>';
+                const digitalDate = ep.digital && ep.digital !== '0000-00-00' ? new Date(ep.digital).toLocaleDateString() : 'N/A';
+
+                return `
+                    <div class="episode-item" id="${epId}" style="cursor: pointer; padding: 10px 12px; border-left: 3px solid #ccc; margin: 5px 0; background: #f9f9f9; border-radius: 4px; transition: all 0.2s; user-select: none;">
+                        <div style="font-size: 13px; color: #666; font-weight: 500;">
+                            <strong style="color: #d9534f;">S${String(ep.season).padStart(2, '0')}E${String(ep.episode).padStart(2, '0')}</strong> - ${this.escapeHtml(ep.title || 'Untitled')}
+                            <span style="color: #999;"> (${premiere})</span>
+                        </div>
+                        <div class="episode-details-content" style="display: none; margin-top: 10px; padding: 10px; background: #ffffff; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 12px; color: #333; line-height: 1.8;">
+                            <div style="font-weight: 600; color: #d9534f; margin-bottom: 8px;">Episode IMDB:</div>
+                            <div style="margin-bottom: 12px;"><strong>🎬 Link:</strong> ${episodeImdbLink}</div>
+                            <div style="margin-top: 6px;"><strong>📅 Premiere Date:</strong> ${premiere}</div>
+                            ${ep.digital && ep.digital !== '0000-00-00' ? `<div style="margin-top: 6px;"><strong>💾 Digital Release:</strong> ${digitalDate}</div>` : ''}
+                            ${ep.mcutime ? `<div style="margin-top: 6px;"><strong>⏰ MCU Timeline:</strong> ${this.escapeHtml(ep.mcutime)}</div>` : ''}
+                            ${ep.contentinformation ? `<div style="margin-top: 6px;"><strong>📝 Info:</strong> ${this.escapeHtml(ep.contentinformation.substring(0, 200))}</div>` : ''}
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
+
+        // Season header if multiple seasons
+        const seasonHeaderHtml = hasMultipleSeasons ?
+            `<div style="padding: 8px 12px; background: #f0f0f0; border-radius: 4px; font-size: 12px; color: #666; margin-bottom: 10px; font-weight: 600;">
+                📺 Multiple Seasons (${seasons.size} seasons)
+            </div>` : '';
 
         return `
             <div class="mcu-card" style="grid-column: 1/-1;">
-                <div class="card-header ${phaseClass}">
-                    <div class="card-title" style="cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'; this.style.opacity = this.style.opacity === '0.7' ? '1' : '0.7';">
+                <div class="card-header ${phaseClass}" style="cursor: pointer; user-select: none;" onclick="event.stopPropagation(); const body = this.nextElementSibling; body.style.display = body.style.display === 'none' ? 'block' : 'none'; this.style.opacity = this.style.opacity === '0.7' ? '1' : '0.7';">
+                    <div class="card-title" style="margin: 0;">
                         📺 ${this.escapeHtml(seriesGroup.series)}
                     </div>
                 </div>
                 <div class="card-body" style="background: #fafafa;">
+                    ${seriesImdbHtml}
+                    ${seasonHeaderHtml}
                     ${episodesHtml}
                 </div>
                 <div class="card-footer">${this.escapeHtml(seriesGroup.category || 'Uncategorized')} • ${seriesGroup.episodes.length} episodes</div>
@@ -391,7 +410,8 @@ const MCUClient = {
 
     createCard(item) {
         const phaseClass = item.category ? `phase-${item.category.toLowerCase().replace(/\s+/g, '-')}` : 'non-phase';
-        const type = item.tv === 1 || item.animated === 1 ? '📺 TV' : '🎬 Film';
+        const isTV = (item.tv == 1) || (item.animated == 1);
+        const type = isTV ? '📺 TV Series' : '🎬 Film';
         const premiere = item.premiere !== '0000-00-00' ? new Date(item.premiere).toLocaleDateString() : 'TBA';
 
         return `
@@ -410,7 +430,7 @@ const MCUClient = {
                             <div class="meta-label">Release</div>
                             <div class="meta-value">${premiere}</div>
                         </div>
-                        ${item.season ? `
+                        ${isTV && item.season ? `
                         <div class="meta-item">
                             <div class="meta-label">Season</div>
                             <div class="meta-value">${item.season}</div>
@@ -452,7 +472,7 @@ const MCUClient = {
                         this.loadData();
                     }
                 })
-                .catch(e => console.log('Auto-refresh check failed'));
+                .catch(e => null);
         }, 5 * 60 * 1000);
     },
 

@@ -190,6 +190,34 @@
             color: white;
         }
 
+        .episode-item {
+            cursor: pointer;
+            padding: 8px 12px;
+            border-left: 3px solid #ccc;
+            margin: 5px 0;
+            background: #f9f9f9;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .episode-item:hover {
+            background: #f0f0f0;
+            border-left-color: #0066cc;
+        }
+
+        .episode-item.expanded {
+            background: #fff3cd;
+            border-left-color: #0066cc;
+        }
+
+        .episode-details {
+            display: none;
+        }
+
+        .episode-item.expanded .episode-details {
+            display: block;
+        }
+
         .main-content {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
