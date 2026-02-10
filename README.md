@@ -2,83 +2,100 @@
 
 ## Package content
 
-This project makes use of jquery and bootstrap, rendering data from the MCU API Database. The database itself keeps
-track of the timeline order with focus on premiere dates and when events takes place in the MCU in MCU time.
+This project provides an interactive web interface using jQuery and Bootstrap to browse the Marvel Cinematic Universe timeline. It renders data from the MCU timeline database, organized by phases and featuring comprehensive metadata including IMDB links, episode information, and premiere dates.
+
+## Features
+
+### Dynamic Content Rendering
+- **Category Filtering**: Browse content by MCU phases, collections, and special categories
+- **TV/Film Toggle**: Easily filter between TV series and films
+- **Live Search**: Real-time search by title, actor, or keywords
+- **Responsive Grouping**: Automatically groups episodes/specials by series (via `extratitle` or title parsing)
+- **Infinite Scroll**: Batch-loads content for performance optimization
+
+### Content Display
+- **Series Cards**: Expandable cards showing series information with IMDB links
+- **Episode Listings**: Detailed episode listings with season/episode numbers and premiere dates
+- **Type Indicators**: Clear visual distinction between films, TV series, documentaries, and animated content
+- **Metadata**: Release dates, IMDB links for both series and episodes, phase information
+
+### User Interface
+- **Category Sidebar**: Displays MCU phases and collections with episode counts
+- **Include TV Shows / Include Films**: Toggles that auto-reload content when changed
+- **Search Box**: Real-time filtering by title, actor, or keywords
+- **Batch Pagination**: 50 items loaded per request with infinite scroll support
+- **Status Badge**: Shows "READY" when data is loaded
+- **Episode Expansion**: Click episodes to expand and view full metadata
+- **Series Grouping**: Automatically groups related episodes under their series name
+- **IMDB Integration**: Direct links to series and individual episode IMDB pages
 
 ## How it works
 
-This html-ajax-project communicates with an API located
-at [Earth616.ORG](https://docs.tornevall.net/display/TORNEVALL/Marvel+MCU+Timeline+API). There are currently several
-resources that is currently in development, but this sample site takes advantage of two specific calls, that makes
-requests faster:
+This html-ajax project communicates with the MCU database via JavaScript API calls:
 
-### First API Call
+### Data Flow
 
-First API Call is a [GET at categories](https://api.earth616.org/api/mcu/categories). The MCU timeline is split up into
-sections depending on what you are interested in, and most of us are probably interested in the categories covering the
-different phases of the MCU. As the documentation mentions there are much more information in the category output than
-we are caring about:
+1. **Category Load**: Fetches all MCU phases and collections
+2. **Content Fetch**: For each category, retrieves all timeline entries
+3. **Grouping Logic**: 
+   - Groups by `extratitle` (primary key for series grouping)
+   - Falls back to extracting series name from title (text before `:` for TV entries)
+   - Standalone items without grouping displayed as individual cards
+4. **Filtering**: Applies TV/Film/Search filters in real-time
+5. **Rendering**: Renders UI elements with IMDB metadata links
 
-![img.png](images/parsed_api_phase.png)
+## Technical Implementation
 
-Some of those values has been of the [prior website](https://mcu.earth616.org/pages/viewpage.action?pageId=54132764)
-where each phase was (is) much defined with different colours. In our project this set up is not required as we build it
-another way. This project only uses this category setup to improve the performance, since we don't have to get all
-titles bulked at the same time. As soon as the HTML page rendered the category, it starts downloading the title list for
-each category which leads us to the ...
+### JavaScript Architecture
+- **MCUClient Object**: Main controller managing data, filtering, and rendering
+- **Grouping Algorithm**: 
+  - Primary: Groups by `extratitle` (series identification)
+  - Fallback: Extracts series name from title (text before `:` for TV entries with tv=1)
+  - Standalone: Individual cards for items without series grouping
+- **No Client Caching**: All data is fetched fresh from the API on page load
+- **Event Handlers**: Manages checkbox changes, search input, and episode expansion
+- **Live Rendering**: Updates UI in real-time as filters change
 
-### ... Second API Call
+### Database Fields Utilized
+- `extratitle`: Primary grouping key (for series identification)
+- `title`: Display name
+- `tv`: Boolean flag (1 = TV series, 0 = film)
+- `animated`: Boolean flag (1 = animated, 0 = live-action)
+- `season`/`episode`: TV series metadata
+- `imdb`/`imdbepisode`: IMDB links
+- `premiere`: Release date
+- `cid`: Category ID (phase/collection)
 
-The second call is based on one of the first API calls built to the api. The timeline. But since this page was built, it
-has been improved so that we can show the timeline based on respective category id. For example, Phase 1 has the id 1,
-so to request all movie/tv-titles in that phase, we just call for it with
-a [simple GET request](https://api.earth616.org/api/mcu/timeline/category/1/). For this category we can not yet split up
-the listview from the API based on TV- and movie so the javascript has to work with the variables extracted from the
-title list instead.
+## API Endpoint
 
-As you [can see here](https://docs.tornevall.net/x/IYDjB), it's quite easy to extract values and keep titling separated
-by the int/boolean column tv. You can also, according to the documentation, furthermore split up TV shows and movies
-based on whether they are animated or not.
+The application fetches data from the MCU Timeline API:
+- **Base URL**: https://tools.tornevall.com/mcu-api/ (PHP API)
+- **Batch Loading**: 50 items per request with pagination
+- **Real-time Updates**: No caching - all data is fresh from database on each load
+- **Query Parameters**: 
+  - `?cid=` - Filter by category ID (MCU phase)
+  - `?find=` - Search by title/actor/keywords
 
-## What's still in progress
+## Changelog
 
-There are several columns that has extra content data from IMDB. There are also other columns in the API that contains
-external URL to information, articles and youtube. For the moment, youtube-links are not integrated in this system.
-Also, very recently the API was updated with insert- and update timestamps. This means that we can keep track on changes
-by comparing the stored datestamps with new. If there is new data updated in the API we can very simple update the
-containers with this data.
+See [CHANGELOG.md](CHANGELOG.md) for detailed version history, bug fixes, and improvements.
 
-## Screenshot
+### Latest Version: 2.0.0
+- Complete rewrite of grouping system
+- Removed all client-side caching for live data
+- Fixed critical "I am Groot" series merging bug
+- Improved checkbox filtering with auto-reload
+- Better IMDB link display and organization
 
-### Onepage Html View - Overview Part
+## Project History
 
-![Overview index](images/overview.png)
+This project has evolved from manual maintenance on Confluence documentation (https://mcu.earth616.org/) to a fully automated, database-driven timeline system.
 
-### Onepage Html View - Expanded Category for Phase 3
+Originally maintained as a static list, the MCU timeline became too complex to manage manually. A dedicated MCU database was created, paired with an Open API (https://mcu.earth616.org/pages/viewpage.action?pageId=82018337), enabling dynamic content rendering.
 
-![](images/expanded_phase.png)
+Early iterations explored React implementations, but the current jQuery/Bootstrap solution provides better performance and maintainability for this use case. The flexible, open API allows anyone to build their own MCU browsing experiences.
 
-## History
+## Development
 
-If you want to take a look of a project that works with AJAX processing against the API you can take a look at
-https://snapshot.earth616.org/ that is live and running on this codebase.
+Contributions and improvements are welcome. Please refer to the Git commit history in [CHANGELOG.md](CHANGELOG.md) for detailed information about each feature and fix.
 
-This is a project that has a long history with a lot of manual handling - the first version was handled in a confluence
-documentation (https://mcu.earth616.org/pages/viewpage.action?pageId=54132764) and is still partially maintained.
-
-Time passed and the list of available films and tv-series in the Marvel Cinematic Universe (that some people rather call
-Marvel Cinematic Multiverse as of today) has been harder to maintain and still make it look good. Also, the overview in
-the current maintained list gets harder and harder to update as there are a lot of content to edit.
-
-And that's how the idea started. When a new API was planned, the entire list was transferred into a database and an Open
-API was created (https://mcu.earth616.org/pages/viewpage.action?pageId=82018337). From this API, everything that has to
-do with the current film and tv-series is available. The base idea of this system was to keep track of when all events
-takes place, since that makes it possible to view everything either in order by the premiere dates, or in order in which
-the movies takes place in the MCU.
-
-The plans was initially to make this a react application that handled stuff automatically. But since I (still) hate
-react even after trying that way, this solution was created instead; with jquery and bootstrap. Since the API is wide
-open, everyone can take inspiration from this project and create their own search engine or whatever comes to mind.
-
-For this specific project, if any ideas comes to your mind, the suggestion is to join and/or contact me so that can be
-added either into the API or this project.
