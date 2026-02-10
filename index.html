@@ -1,63 +1,410 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <title>Snapshot-616 - Marvel Cinematic Multiverse API Viewer</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
-          integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
-            integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
-            integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
-            crossorigin="anonymous"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
-            integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
-            crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snapshot-616 - Marvel Cinematic Multiverse API</title>
 
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="css/content.css">
-    <script src="js/content.js"></script>
-    <script>
-        $(document).ready(function () {
-            getApiContent()
-        });
-    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f5f5f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 30px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .header p {
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .filters-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .filter-group label {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .filter-group input[type="checkbox"],
+        .filter-group input[type="text"] {
+            cursor: pointer;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #0066cc;
+            box-shadow: 0 0 0 3px rgba(0,102,204,0.1);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-badge.loading {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status-badge.ready {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .status-badge.error {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        .content-wrapper {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+
+        .sidebar-section {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .sidebar-header {
+            background: #f5f5f5;
+            padding: 15px;
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .category-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .category-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .category-item:hover {
+            background: #f9f9f9;
+            padding-left: 20px;
+        }
+
+        .category-item.active {
+            background: #e3f2fd;
+            color: #0066cc;
+            font-weight: 600;
+            border-left: 4px solid #0066cc;
+            padding-left: 12px;
+        }
+
+        .category-count {
+            background: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #666;
+        }
+
+        .category-item.active .category-count {
+            background: #0066cc;
+            color: white;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .mcu-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mcu-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            flex-grow: 1;
+        }
+
+        .card-header.phase-1 { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card-header.phase-2 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .card-header.phase-3 { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .card-header.phase-4 { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+        .card-header.phase-5 { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .card-header.phase-6 { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
+        .card-header.non-phase { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333; }
+
+        .card-title {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        .card-subtitle {
+            margin: 8px 0 0 0;
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .card-body {
+            padding: 15px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+
+        .meta-item {
+            padding: 8px;
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+
+        .meta-label {
+            color: #999;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.5px;
+        }
+
+        .meta-value {
+            color: #333;
+            margin-top: 3px;
+            word-break: break-word;
+        }
+
+        .card-footer {
+            padding: 10px 15px;
+            background: #f9f9f9;
+            border-top: 1px solid #f0f0f0;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .loader {
+            text-align: center;
+            padding: 40px;
+            font-size: 14px;
+            color: #999;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #0066cc;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .pagination-footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+            font-size: 13px;
+        }
+
+        @media (max-width: 768px) {
+            .content-wrapper {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: static;
+            }
+
+            .main-content {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+
+            .filters-panel {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-group {
+                width: 100%;
+            }
+
+            .search-box {
+                min-width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
 
-<div class="container container-fluid jumbotron" style="padding-top: 20px !important;">
-    <div class="alert alert-primary main" style="padding-top: 10px; margin-bottom: 10px;"><b>Snapshot-616 - Marvel
-        Cinematic Multiverse API</b>
+<div class="header">
+    <div class="container">
+        <h1>⚡ Snapshot-616</h1>
+        <p>Marvel Cinematic Multiverse API</p>
     </div>
-    <div class="alert alert-info clickable mainCategory" onclick="getTable('all')"><b>Show all categories</b></div>
+</div>
 
-    <div class="input-group mb-3">
-        <div class="input-group-prepend">
-            <div class="input-group-text">
-                <input type="checkbox" checked="checked" aria-label="Include TV Shows" id="includeTv" onchange="checkMcuChoice()">&nbsp;
-                <label class="form-check-label" for="includeTv">Include TV Shows.</label>
+<div class="container">
+    <div class="filters-panel">
+        <div class="filter-group">
+            <input type="checkbox" id="includeTv" checked="checked">
+            <label for="includeTv">📺 Include TV Shows</label>
+        </div>
+        <div class="filter-group">
+            <input type="checkbox" id="includeFilm" checked="checked">
+            <label for="includeFilm">🎬 Include Films</label>
+        </div>
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="🔍 Search by title, actor, or keywords...">
+        </div>
+        <span class="status-badge loading" id="statusBadge">
+            <span class="spinner" style="display:inline-block; width:12px; height:12px; margin-right:5px; margin-bottom:-2px;"></span>
+            Loading...
+        </span>
+    </div>
+
+    <div class="content-wrapper">
+        <div class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-header">📂 Categories</div>
+                <div class="category-list" id="categoryList"></div>
             </div>
-            <div class="input-group-text">
-                <input type="checkbox" checked="checked" aria-label="Include TV Shows" id="includeFilm" onchange="checkMcuChoice()">&nbsp;
-                <label class="form-check-label" for="includeFilm">Include Films.</label>
-            </div>
-            <div class="input-group-text">
-                <label class="form-check-label" for="find">Find </label>&nbsp;
-                <input type="text" id="find" readonly="readonly" class="findReadOnly" onkeyup="findit()">
+        </div>
+
+        <div class="main-content" id="mainContent">
+            <div class="loader">
+                <div class="spinner"></div>
+                <p>Loading MCU Timeline...</p>
             </div>
         </div>
     </div>
 
-    <div id="timeLineStatus">API Status</div>
-    <div id="loader"></div>
-    <div id="tooFast"></div>
-    <div id="mcuTable">
+    <div class="pagination-footer" id="footer">
+        Powered by <a href="https://github.com/Tornevall/mcu-timeline-api" target="_blank">mcu-timeline-api</a>
     </div>
-    <div id="bottomLine" style="text-align: center;margin-top:10px;">
-        <a href="https://mcu.earth616.org/display/TORNEVALL/Marvel+MCU+Timeline+API" target="_blank">Powered by Earth616-API.</a><br>
-        <a href="https://github.com/Tornevall/mcu-timeline-api" target="_blank">This project can be found at GitHub!</a><br>
-        <br>
-        <a href="https://mcu.earth616.org/" target="_blank">Check out the old manually handled site here!</a><br>
-        <a href="https://snapshot-legacy.earth616.org/" target="_blank">Legacy Snapshot has moved here.</a><br>
-    </div>
-    <br>
 </div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="js/content-optimized.js"></script>
+
 </body>
 </html>
+
