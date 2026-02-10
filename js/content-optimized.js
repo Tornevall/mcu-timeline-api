@@ -27,6 +27,10 @@ const MCUClient = {
 
     // Initialize
     init() {
+        // Ensure checkboxes are checked
+        $('#includeTv').prop('checked', true);
+        $('#includeFilm').prop('checked', true);
+
         this.setupEventListeners();
         this.loadData();
         this.startAutoRefresh();
@@ -34,10 +38,30 @@ const MCUClient = {
 
     // Event Listeners
     setupEventListeners() {
-        $('#searchInput').on('keyup', () => this.handleSearch());
-        $('#includeTv').on('change', () => this.applyFilters());
-        $('#includeFilm').on('change', () => this.applyFilters());
-        $(window).on('scroll', () => this.handleScroll());
+        const self = this;
+
+        // Search input
+        $('#searchInput').on('keyup', function() {
+            console.log('Search triggered');
+            self.handleSearch();
+        });
+
+        // TV Shows checkbox
+        $('#includeTv').on('change', function() {
+            console.log('TV checkbox changed to:', $(this).is(':checked'));
+            self.applyFilters();
+        });
+
+        // Films checkbox
+        $('#includeFilm').on('change', function() {
+            console.log('Film checkbox changed to:', $(this).is(':checked'));
+            self.applyFilters();
+        });
+
+        // Window scroll
+        $(window).on('scroll', function() {
+            self.handleScroll();
+        });
     },
 
     // Load Data - Optimized batched call
@@ -153,25 +177,36 @@ const MCUClient = {
         const includeTv = $('#includeTv').is(':checked');
         const includeFilm = $('#includeFilm').is(':checked');
 
-        let filtered = this.filteredData.length > 0 ? this.filteredData : this.allData;
+        console.log('🔄 applyFilters called - TV:', includeTv, 'Film:', includeFilm);
+        console.log('📊 Starting data count:', this.allData.length);
 
-        // Filter by type
-        filtered = filtered.filter(item => {
+        // ALWAYS START FROM allData - don't use previously filtered data
+        let filtered = this.allData.filter(item => {
             const isTV = item.tv === 1 || item.animated === 1;
-            const isFilm = item.tv === 0 && item.animated === 0;
 
-            if (!includeTv && isTV) return false;
-            if (!includeFilm && isFilm) return false;
+            // Items with extratitle are treated as TV/series content
+            // (even if tv=0, they're grouped with TV series)
+            const hasExtratitle = item.extratitle && item.extratitle.trim();
+            const isTVContent = isTV || hasExtratitle;
+            const isFilmContent = !isTVContent;
+
+            if (!includeTv && isTVContent) return false;
+            if (!includeFilm && isFilmContent) return false;
 
             return true;
         });
 
+        console.log('📊 After type filter:', filtered.length);
+
         // Filter by category
         if (this.currentCategory !== 'all') {
             filtered = filtered.filter(item => item.category === this.currentCategory);
+            console.log('📊 After category filter:', filtered.length);
         }
 
         this.filteredData = filtered;
+        console.log('✅ filteredData set to:', this.filteredData.length);
+
         this.currentPage = 1;
         this.renderContent();
     },
@@ -233,6 +268,8 @@ const MCUClient = {
     renderContent() {
         const data = this.filteredData;
 
+        console.log('🎨 renderContent called with', data.length, 'items');
+
         if (data.length === 0) {
             $('#mainContent').html(`
                 <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
@@ -240,24 +277,76 @@ const MCUClient = {
                     <div style="color: #999; font-size: 16px;">No results found</div>
                 </div>
             `);
+            console.log('❌ No data to render');
             return;
         }
+
+        // Group TV shows by series (extratitle) and films separately
+        const grouped = {};
+        const standaloneFilms = [];
+
+        data.forEach(item => {
+            const isTV = item.tv === 1 || item.animated === 1;
+
+            console.log(`📺 Item: "${item.title}" | isTV:${isTV} | tv:${item.tv} | animated:${item.animated} | extratitle:"${item.extratitle}"`);
+
+            // Group by extratitle if it exists (works for both TV and documentaries)
+            if (item.extratitle && item.extratitle.trim()) {
+                const seriesKey = item.extratitle;
+                console.log(`  ↳ GROUPING into series: "${seriesKey}"`);
+                if (!grouped[seriesKey]) {
+                    grouped[seriesKey] = {
+                        series: item.extratitle,
+                        category: item.category,
+                        episodes: []
+                    };
+                }
+                grouped[seriesKey].episodes.push(item);
+            } else {
+                // Standalone films/TV without extratitle
+                console.log(`  ↳ ADDING as STANDALONE (no extratitle)`);
+                standaloneFilms.push(item);
+            }
+        });
 
         // Render cards
         let html = '';
         const start = (this.currentPage - 1) * this.BATCH_SIZE;
         const end = start + this.BATCH_SIZE;
-        const batch = data.slice(start, end);
+
+        // Combine grouped series and standalone films for pagination
+        const allItems = [];
+        Object.values(grouped).forEach(seriesGroup => {
+            allItems.push(seriesGroup);
+        });
+        standaloneFilms.forEach(film => {
+            allItems.push(film);
+        });
+
+        console.log('📦 Grouped:', Object.keys(grouped).length, 'series');
+        console.log('🎬 Standalone items:', standaloneFilms.length);
+        console.log('📊 Total allItems:', allItems.length);
+
+        const batch = allItems.slice(start, end);
+
+        console.log('📄 Rendering batch of', batch.length, 'items');
 
         batch.forEach(item => {
-            html += this.createCard(item);
+            if (item.episodes) {
+                // This is a series group
+                html += this.createSeriesGroup(item);
+            } else {
+                // This is a standalone film or TV episode
+                html += this.createCard(item);
+            }
         });
 
         $('#mainContent').html(html);
+        console.log('✅ HTML inserted into mainContent');
 
         // Update footer with pagination info
-        const totalPages = Math.ceil(data.length / this.BATCH_SIZE);
-        let footerText = `Showing ${start + 1}–${Math.min(end, data.length)} of ${data.length}`;
+        const totalPages = Math.ceil(allItems.length / this.BATCH_SIZE);
+        let footerText = `Showing ${start + 1}–${Math.min(end, allItems.length)} of ${allItems.length}`;
 
         if (totalPages > 1) {
             footerText += ` (Page ${this.currentPage}/${totalPages})`;
@@ -265,6 +354,39 @@ const MCUClient = {
 
         footerText += ' • Powered by <a href="https://github.com/Tornevall/mcu-timeline-api" target="_blank">mcu-timeline-api</a>';
         $('#footer').html(footerText);
+    },
+
+    createSeriesGroup(seriesGroup) {
+        const phaseClass = seriesGroup.category ? `phase-${seriesGroup.category.toLowerCase().replace(/\s+/g, '-')}` : 'non-phase';
+
+        const episodesHtml = seriesGroup.episodes
+            .sort((a, b) => {
+                const aNum = parseInt(a.season) * 1000 + parseInt(a.episode);
+                const bNum = parseInt(b.season) * 1000 + parseInt(b.episode);
+                return aNum - bNum;
+            })
+            .map(ep => `
+                <div style="padding: 8px 12px; border-left: 3px solid #ccc; margin: 5px 0; background: #f9f9f9;">
+                    <div style="font-size: 13px; color: #666;">
+                        <strong>S${String(ep.season).padStart(2, '0')}E${String(ep.episode).padStart(2, '0')}</strong> - ${this.escapeHtml(ep.title || 'Untitled')}
+                        ${ep.premiere && ep.premiere !== '0000-00-00' ? `<span style="color: #999;"> (${new Date(ep.premiere).toLocaleDateString()})</span>` : ''}
+                    </div>
+                </div>
+            `).join('');
+
+        return `
+            <div class="mcu-card" style="grid-column: 1/-1;">
+                <div class="card-header ${phaseClass}">
+                    <div class="card-title" style="cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'; this.style.opacity = this.style.opacity === '0.7' ? '1' : '0.7';">
+                        📺 ${this.escapeHtml(seriesGroup.series)}
+                    </div>
+                </div>
+                <div class="card-body" style="background: #fafafa;">
+                    ${episodesHtml}
+                </div>
+                <div class="card-footer">${this.escapeHtml(seriesGroup.category || 'Uncategorized')} • ${seriesGroup.episodes.length} episodes</div>
+            </div>
+        `;
     },
 
     createCard(item) {
