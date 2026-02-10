@@ -96,3 +96,35 @@
     border: 1px dotted gray;
     padding: 5px;
 }
+
+/* Episode item expandable styles */
+.episode-item {
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.episode-item:hover {
+    background: #f0f0f0 !important;
+    border-left-color: #007bff !important;
+}
+
+.episode-item.expanded {
+    background: #e8f4f8 !important;
+    border-left-color: #007bff !important;
+}
+
+.episode-item.expanded .episode-details {
+    display: block !important;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
