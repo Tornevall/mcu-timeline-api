@@ -20,11 +20,14 @@ This project provides an interactive web interface using jQuery and Bootstrap to
 - **Metadata**: Release dates, IMDB links for both series and episodes, phase information
 
 ### User Interface
-- Category sidebar with episode counts
-- Include TV Shows / Include Films toggles
-- Search box with real-time filtering
-- Batch pagination (50 items per load, expandable)
-- Status badge showing data cache state
+- **Category Sidebar**: Displays MCU phases and collections with episode counts
+- **Include TV Shows / Include Films**: Toggles that auto-reload content when changed
+- **Search Box**: Real-time filtering by title, actor, or keywords
+- **Batch Pagination**: 50 items loaded per request with infinite scroll support
+- **Status Badge**: Shows "READY" when data is loaded
+- **Episode Expansion**: Click episodes to expand and view full metadata
+- **Series Grouping**: Automatically groups related episodes under their series name
+- **IMDB Integration**: Direct links to series and individual episode IMDB pages
 
 ## How it works
 
@@ -45,9 +48,13 @@ This html-ajax project communicates with the MCU database via JavaScript API cal
 
 ### JavaScript Architecture
 - **MCUClient Object**: Main controller managing data, filtering, and rendering
-- **Grouping Algorithm**: Intelligently groups content by series for cleaner UI
-- **Caching**: Stores fetched data to minimize API calls
-- **Event Handlers**: Manages checkbox changes and search input events
+- **Grouping Algorithm**: 
+  - Primary: Groups by `extratitle` (series identification)
+  - Fallback: Extracts series name from title (text before `:` for TV entries with tv=1)
+  - Standalone: Individual cards for items without series grouping
+- **No Client Caching**: All data is fetched fresh from the API on page load
+- **Event Handlers**: Manages checkbox changes, search input, and episode expansion
+- **Live Rendering**: Updates UI in real-time as filters change
 
 ### Database Fields Utilized
 - `extratitle`: Primary grouping key (for series identification)
@@ -59,9 +66,26 @@ This html-ajax project communicates with the MCU database via JavaScript API cal
 - `premiere`: Release date
 - `cid`: Category ID (phase/collection)
 
+## API Endpoint
+
+The application fetches data from the MCU Timeline API:
+- **Base URL**: https://tools.tornevall.com/mcu-api/ (PHP API)
+- **Batch Loading**: 50 items per request with pagination
+- **Real-time Updates**: No caching - all data is fresh from database on each load
+- **Query Parameters**: 
+  - `?cid=` - Filter by category ID (MCU phase)
+  - `?find=` - Search by title/actor/keywords
+
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for detailed version history and updates.
+See [CHANGELOG.md](CHANGELOG.md) for detailed version history, bug fixes, and improvements.
+
+### Latest Version: 2.0.0
+- Complete rewrite of grouping system
+- Removed all client-side caching for live data
+- Fixed critical "I am Groot" series merging bug
+- Improved checkbox filtering with auto-reload
+- Better IMDB link display and organization
 
 ## Project History
 
@@ -70,3 +94,8 @@ This project has evolved from manual maintenance on Confluence documentation (ht
 Originally maintained as a static list, the MCU timeline became too complex to manage manually. A dedicated MCU database was created, paired with an Open API (https://mcu.earth616.org/pages/viewpage.action?pageId=82018337), enabling dynamic content rendering.
 
 Early iterations explored React implementations, but the current jQuery/Bootstrap solution provides better performance and maintainability for this use case. The flexible, open API allows anyone to build their own MCU browsing experiences.
+
+## Development
+
+Contributions and improvements are welcome. Please refer to the Git commit history in [CHANGELOG.md](CHANGELOG.md) for detailed information about each feature and fix.
+
