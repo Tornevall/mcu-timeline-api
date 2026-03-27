@@ -2,6 +2,12 @@
 
 All notable changes to the Marvel MCU Timeline API project are documented here.
 
+## [Unreleased] - 2026-03-27
+
+### Added
+- Added **"🌐 More info & live API"** and **"🐙 GitHub / Support"** header buttons to the public `index.html` page, matching the equivalent links added to the MCU admin editor view. Both open in a new tab.
+- Added descriptive header text below the buttons explaining how to request features or report issues (via the GitHub issue tracker) and how to contact via tools.tornevall.net for contributing MCU timeline data or requesting admin/contributor access.
+
 ## [2.0.0] - 2026-02-10
 
 ### Major Changes
